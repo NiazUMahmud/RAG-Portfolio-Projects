@@ -1,0 +1,85 @@
+# RAG Portfolio Projects
+
+This repository contains a small Retrieval-Augmented Generation (RAG) portfolio project built with LangChain, SentenceTransformers, ChromaDB/Typesense vector stores, and notebook demos. It includes data ingestion examples (text and PDF loaders), embedding generation, vector store wiring, and small helper cells to install or diagnose common environment issues.
+
+## Repo layout
+
+- `main.py` - optional script (entry point)
+- `requirements.txt` - pinned Python dependencies (use to create a virtualenv)
+- `pyproject.toml` - project metadata
+- `data/` - sample data and notebooks
+	- `text_files/` - sample `.txt` files
+	- `pdf/` - sample pdfs
+	- `notebook/document.ipynb` - primary RAG notebook (data ingestion → embedding → vector store)
+- `typesense.ipynb` - example showing TypeSense usage
+
+## Quick start
+
+1. Create and activate a Python environment (recommended Python 3.10+):
+
+	 powershell
+	 ```powershell
+	 python -m venv .venv
+	 .\.venv\Scripts\Activate.ps1
+	 python -m pip install --upgrade pip
+	 python -m pip install -r requirements.txt
+	 ```
+
+2. Open the notebooks in VS Code or Jupyter: run the cells in order. Use the notebook kernel that matches the environment where you installed the packages.
+
+3. If a notebook raises ModuleNotFoundError for packages (e.g. `chromadb`, `typesense`, `sentence_transformers`), install them into the kernel environment. You can run the helper install cells included in the notebooks which call pip via the kernel's Python.
+
+## Common issues & fixes
+
+- Missing `chromadb` in notebook
+	- Cause: package installed in a different Python than the notebook kernel.
+	- Fix: run the provided helper cell which does `subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'chromadb'])`, then restart kernel.
+
+- SentenceTransformers / Hugging Face access errors (401 / RepositoryNotFoundError)
+	- Cause: private/gated model access or missing/expired Hugging Face token; sometimes outdated `huggingface_hub`/`transformers` packages.
+	- Fixes:
+		- Upgrade packages: `pip install -U sentence-transformers huggingface_hub transformers`
+		- Create a Hugging Face token at https://huggingface.co/settings/tokens and set `HUGGINGFACE_HUB_TOKEN` in your environment or run `huggingface_hub.login(token=...)` in the notebook.
+
+- PDF loader errors (`PyMuPDFLoader` / `fitz` missing)
+	- Fix: install `pymupdf` in the kernel: `pip install pymupdf` (not `PyPDF2`).
+
+- LangChain embedding import differences
+	- Newer/older LangChain versions expose different embedding helper names. If `from langchain.embeddings import HuggingFaceEmbeddings` fails, use `from langchain_community.embeddings import HuggingFaceEmbeddings` or the `langchain_huggingface` integration depending on your installed packages. The notebooks include alternate imports and diagnostic cells to show versions.
+
+## Notebook tips
+
+- Always run the diagnostic cell near the top of the notebook that prints `sys.executable` — this confirms which Python the kernel is using.
+- Use the notebook helper install cells where provided — they install into the kernel's Python to avoid environment mismatch.
+- For embedding generation, call the embedding manager to produce a list/array of embeddings and pass that list to the vector store add function. Example pattern used in the project:
+
+	1. chunk documents
+	2. texts = [doc.page_content for doc in chunks]
+	3. embeddings = embedding_manager.generate_embeddings(texts)
+	4. vector_store.add_documents(chunks, embeddings)
+
+## Vector stores
+
+- ChromaDB: the notebook includes a `VectorStore` helper wrapping a persistent ChromaDB client. If you hit API or version mismatches, the code first tries `chromadb.PersistentClient` and falls back to `chromadb.Client(Settings(...))` depending on installed version.
+- TypeSense: `typesense` usage is demonstrated in `typesense.ipynb`. Ensure `typesense` is installed into the kernel and that you do not commit production API keys into the repo. Treat the sample keys as placeholders.
+
+## Security & secrets
+
+- Never commit API keys or tokens to source control. Use environment variables or a secrets manager. Notebooks in this repo may contain placeholder values; replace them with secure variables before running.
+
+## Troubleshooting checklist
+
+1. Confirm kernel Python: run `import sys; print(sys.executable)` in a notebook cell.
+2. If imports fail, run the corresponding install helper cell or install via `python -m pip install <package>` using the same interpreter shown by `sys.executable`.
+3. For Hugging Face model access errors: create a token and set `HUGGINGFACE_HUB_TOKEN` or login from the notebook.
+4. Restart the kernel after any package install.
+
+## Want help?
+If you'd like, I can:
+- Insert helper cells into notebooks to automate installs or diagnosis,
+- Run specific pip installs into a chosen Python (tell me which python executable), or
+- Update notebook code to make the flow more robust.
+
+---
+Generated by an automated assistant to document the RAG Portfolio Projects workspace. Edit as needed.
+
