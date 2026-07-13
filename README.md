@@ -1,85 +1,107 @@
-# RAG Portfolio Projects
+# 📚 RAG Document Q&A — Chat with Your PDFs
 
-This repository contains a small Retrieval-Augmented Generation (RAG) portfolio project built with LangChain, SentenceTransformers, ChromaDB/Typesense vector stores, and notebook demos. It includes data ingestion examples (text and PDF loaders), embedding generation, vector store wiring, and small helper cells to install or diagnose common environment issues.
+A complete **Retrieval-Augmented Generation (RAG)** application: upload any PDF, ask questions in plain English, and get answers grounded in the document — with page-level citations and similarity scores for every source.
 
-## Repo layout
+Built with **LangChain · ChromaDB · SentenceTransformers · Groq · Streamlit**.
 
-- `main.py` - optional script (entry point)
-- `requirements.txt` - pinned Python dependencies (use to create a virtualenv)
-- `pyproject.toml` - project metadata
-- `data/` - sample data and notebooks
-	- `text_files/` - sample `.txt` files
-	- `pdf/` - sample pdfs
-	- `notebook/document.ipynb` - primary RAG notebook (data ingestion → embedding → vector store)
-- `typesense.ipynb` - example showing TypeSense usage
+![RAG Architecture](RAG.png)
 
-## Quick start
+## ✨ Features
 
-1. Create and activate a Python environment (recommended Python 3.10+):
+- **📄 PDF ingestion** — upload one or more PDFs; text is extracted page by page with PyMuPDF
+- **✂️ Smart chunking** — recursive character splitting with tunable chunk size and overlap, so context isn't lost at chunk boundaries
+- **🧠 Semantic search** — chunks are embedded with `all-MiniLM-L6-v2` (384-dim vectors) and stored in a persistent ChromaDB collection using cosine similarity
+- **⚡ Fast, grounded answers** — Groq's Llama 3.3 70B answers using *only* the retrieved context, dramatically reducing hallucinations
+- **🔍 Transparent citations** — every answer shows the exact source chunks, page numbers, and similarity scores. No black box.
+- **🎛️ Tunable retrieval** — adjust top-k, chunk size, and overlap live from the sidebar and see how retrieval quality changes
 
-	 powershell
-	 ```powershell
-	 python -m venv .venv
-	 .\.venv\Scripts\Activate.ps1
-	 python -m pip install --upgrade pip
-	 python -m pip install -r requirements.txt
-	 ```
+## 🏗️ How It Works
 
-2. Open the notebooks in VS Code or Jupyter: run the cells in order. Use the notebook kernel that matches the environment where you installed the packages.
+```
+PDF upload → PyMuPDF text extraction → recursive chunking
+→ SentenceTransformer embeddings → ChromaDB vector store
+→ cosine similarity search → Groq LLM answer with cited sources
+```
 
-3. If a notebook raises ModuleNotFoundError for packages (e.g. `chromadb`, `typesense`, `sentence_transformers`), install them into the kernel environment. You can run the helper install cells included in the notebooks which call pip via the kernel's Python.
+**Data ingestion pipeline:**
 
-## Common issues & fixes
+![Data Ingestion Pipeline](Data%20Ingestion%20pipiline.png)
 
-- Missing `chromadb` in notebook
-	- Cause: package installed in a different Python than the notebook kernel.
-	- Fix: run the provided helper cell which does `subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'chromadb'])`, then restart kernel.
+**Full RAG pipeline:**
 
-- SentenceTransformers / Hugging Face access errors (401 / RepositoryNotFoundError)
-	- Cause: private/gated model access or missing/expired Hugging Face token; sometimes outdated `huggingface_hub`/`transformers` packages.
-	- Fixes:
-		- Upgrade packages: `pip install -U sentence-transformers huggingface_hub transformers`
-		- Create a Hugging Face token at https://huggingface.co/settings/tokens and set `HUGGINGFACE_HUB_TOKEN` in your environment or run `huggingface_hub.login(token=...)` in the notebook.
+![Building the RAG Pipeline](Building%20the%20RAG%20Pipeline.png)
 
-- PDF loader errors (`PyMuPDFLoader` / `fitz` missing)
-	- Fix: install `pymupdf` in the kernel: `pip install pymupdf` (not `PyPDF2`).
+## 🚀 Quickstart
 
-- LangChain embedding import differences
-	- Newer/older LangChain versions expose different embedding helper names. If `from langchain.embeddings import HuggingFaceEmbeddings` fails, use `from langchain_community.embeddings import HuggingFaceEmbeddings` or the `langchain_huggingface` integration depending on your installed packages. The notebooks include alternate imports and diagnostic cells to show versions.
+**1. Clone and install** (using [uv](https://docs.astral.sh/uv/) — recommended):
 
-## Notebook tips
+```powershell
+git clone https://github.com/NiazUMahmud/RAG-Portfolio-Projects.git
+cd RAG-Portfolio-Projects
+uv sync
+```
 
-- Always run the diagnostic cell near the top of the notebook that prints `sys.executable` — this confirms which Python the kernel is using.
-- Use the notebook helper install cells where provided — they install into the kernel's Python to avoid environment mismatch.
-- For embedding generation, call the embedding manager to produce a list/array of embeddings and pass that list to the vector store add function. Example pattern used in the project:
+Or with plain pip:
 
-	1. chunk documents
-	2. texts = [doc.page_content for doc in chunks]
-	3. embeddings = embedding_manager.generate_embeddings(texts)
-	4. vector_store.add_documents(chunks, embeddings)
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
-## Vector stores
+**2. Add your Groq API key** (free at [console.groq.com](https://console.groq.com)) — create a `.env` file in the project root:
 
-- ChromaDB: the notebook includes a `VectorStore` helper wrapping a persistent ChromaDB client. If you hit API or version mismatches, the code first tries `chromadb.PersistentClient` and falls back to `chromadb.Client(Settings(...))` depending on installed version.
-- TypeSense: `typesense` usage is demonstrated in `typesense.ipynb`. Ensure `typesense` is installed into the kernel and that you do not commit production API keys into the repo. Treat the sample keys as placeholders.
+```
+GROQ_API_KEY=your_key_here
+```
 
-## Security & secrets
+**3. Run the app:**
 
-- Never commit API keys or tokens to source control. Use environment variables or a secrets manager. Notebooks in this repo may contain placeholder values; replace them with secure variables before running.
+```powershell
+uv run streamlit run app.py
+```
 
-## Troubleshooting checklist
+**4. Use it** — upload a PDF in the sidebar, click **Ingest uploaded PDFs**, then ask questions in the chat.
 
-1. Confirm kernel Python: run `import sys; print(sys.executable)` in a notebook cell.
-2. If imports fail, run the corresponding install helper cell or install via `python -m pip install <package>` using the same interpreter shown by `sys.executable`.
-3. For Hugging Face model access errors: create a token and set `HUGGINGFACE_HUB_TOKEN` or login from the notebook.
-4. Restart the kernel after any package install.
+> Try it with the included [Attention Is All You Need](data/notebook/data/pdf/) paper — ask *"What is multi-head attention?"* and watch it answer with the formula, citing page 5. 🎯
 
-## Want help?
-If you'd like, I can:
-- Insert helper cells into notebooks to automate installs or diagnosis,
-- Run specific pip installs into a chosen Python (tell me which python executable), or
-- Update notebook code to make the flow more robust.
+## 🧰 Tech Stack
+
+| Component | Technology |
+|---|---|
+| UI | Streamlit (chat interface, live settings) |
+| PDF parsing | PyMuPDF |
+| Chunking | LangChain `RecursiveCharacterTextSplitter` |
+| Embeddings | SentenceTransformers (`all-MiniLM-L6-v2`) |
+| Vector store | ChromaDB (persistent, cosine similarity) |
+| LLM | Groq — Llama 3.3 70B / Llama 3.1 8B |
+| Environment | Python 3.13 · uv |
+
+## 📁 Project Structure
+
+```
+├── app.py                      # Streamlit RAG app (the main deliverable)
+├── data/notebook/
+│   ├── document.ipynb          # Notebook: ingestion → embeddings → vector store
+│   └── data/pdf/               # Sample PDFs for testing
+├── pdf_loader.ipynb            # Notebook: retriever pipeline experiments
+├── typesense.ipynb             # Notebook: Typesense as an alternative vector store
+├── pyproject.toml              # Dependencies (uv)
+└── requirements.txt            # Dependencies (pip)
+```
+
+The notebooks document the learning journey — building each pipeline stage by hand (document loaders, embedding manager, vector store wrapper, retriever) before assembling them into the polished app.
+
+## 💡 Key Lessons Learned
+
+- **Chunking strategy matters more than you'd think** — chunk size and overlap directly change retrieval quality
+- **Cosine vs. L2 distance is not a detail you can ignore** — ChromaDB defaults to L2; converting distance to a similarity score only makes sense once the collection is configured for cosine (`hnsw:space: cosine`)
+- **Grounding the LLM** with "answer only from the provided context" plus explicit source citations makes answers verifiable and cuts hallucinations
+
+## 🔐 Security
+
+API keys are loaded from `.env` (git-ignored) — never committed to source control. Generated vector stores are also git-ignored and rebuilt by re-ingesting PDFs.
 
 ---
-Generated by an automated assistant to document the RAG Portfolio Projects workspace. Edit as needed.
 
+*Part of my RAG portfolio series. Questions or feedback welcome — [connect with me on LinkedIn](https://www.linkedin.com/).*
